@@ -1717,6 +1717,35 @@ grBufferClear( GrColor_t color, GrAlpha_t alpha, FxU32 depth )
 
 }
 
+FX_ENTRY void FX_CALL
+grBufferClearNoDepth( GrColor_t color, GrAlpha_t alpha )
+{
+  vbo_draw();
+  LOG("grBufferClear(%d,%d,%d)\r\n", color, alpha);
+  switch(lfb_color_fmt)
+  {
+    case GR_COLORFORMAT_ARGB:
+      glClearColor(((color >> 16) & 0xFF) / 255.0f,
+                   ((color >>  8) & 0xFF) / 255.0f,
+                   ( color        & 0xFF) / 255.0f,
+                   alpha / 255.0f);
+          break;
+    case GR_COLORFORMAT_RGBA:
+      glClearColor(((color >> 24) & 0xFF) / 255.0f,
+                   ((color >> 16) & 0xFF) / 255.0f,
+                   (color         & 0xFF) / 255.0f,
+                   alpha / 255.0f);
+          break;
+    default:
+      display_warning("grBufferClear: unknown color format : %x", lfb_color_fmt);
+  }
+
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  // ZIGGY TODO check that color mask is on
+  buffer_cleared = 1;
+}
+
 // #include <unistd.h>
 FX_ENTRY void FX_CALL
 grBufferSwap( FxU32 swap_interval )
