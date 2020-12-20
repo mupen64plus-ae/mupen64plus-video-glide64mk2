@@ -50,7 +50,7 @@ int w_buffer_mode;
 int inverted_culling;
 int culling_mode;
 
-#define VERTEX_BUFFER_SIZE 1500 //Max amount of vertices to buffer, this seems large enough.
+#define VERTEX_BUFFER_SIZE 750 //Max amount of vertices to buffer, this seems large enough.
 static VERTEX vertex_buffer[VERTEX_BUFFER_SIZE];
 static int vertex_buffer_count = 0;
 static GLenum vertex_draw_mode;
@@ -574,6 +574,9 @@ grDrawLine( const void *a, const void *b )
 */
 }
 
+#include <android/log.h>
+#include <sstream>
+
 FX_ENTRY void FX_CALL
 grDrawVertexArray(FxU32 mode, FxU32 Count, void *pointers2)
 {
@@ -631,5 +634,27 @@ grDrawVertexArrayContiguous(FxU32 mode, FxU32 Count, void *pointers, FxU32 strid
     break;
   default:
     display_warning("grDrawVertexArrayContiguous : unknown mode : %x", mode);
+  }
+
+  if (settings.adreno_crash_workaround) {
+    auto* data = reinterpret_cast<VERTEX*>(pointers);
+    bool fullscreenCheck[4];
+    memset(fullscreenCheck, false, sizeof(fullscreenCheck));
+
+    for (int index = 0; index < Count; ++index) {
+      VERTEX& vertex = data[index];
+
+      if (vertex.x <= 1.0f && vertex.y <= 1.0f) fullscreenCheck[0] = true;
+      if (vertex.x >= (float)viewport_width - 1 && vertex.y <= 1.0f) fullscreenCheck[1] = true;
+      if (vertex.x <= 1.0f && vertex.y >= (float)viewport_height - 1) fullscreenCheck[2] = true;
+      if (vertex.x >= (float)viewport_width - 1 && vertex.y >= (float)viewport_height - 1) fullscreenCheck[3] = true;
+    }
+
+    bool fullScreenQuad = fullscreenCheck[0] && fullscreenCheck[1] && fullscreenCheck[2] && fullscreenCheck[3];
+
+    if (fullScreenQuad) {
+      vbo_draw();
+      glFlush();
+    }
   }
 }
